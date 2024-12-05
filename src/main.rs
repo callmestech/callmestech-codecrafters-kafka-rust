@@ -12,8 +12,11 @@ fn main() {
     for stream in listener.incoming() {
         let result = stream.and_then(|mut stream| {
             println!("accepted new connection");
-            let corelation_id = 7i32;
-            stream.write_all(&corelation_id.to_be_bytes())
+            let message_id = 0i32.to_be_bytes();
+            let corelation_id = 7i32.to_be_bytes();
+
+            let response = [message_id, corelation_id].concat();
+            stream.write_all(&response)
         });
         match result {
             Ok(_) => {}
