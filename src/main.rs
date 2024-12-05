@@ -1,7 +1,7 @@
 #![allow(unused_imports)]
 use std::{
     io::{BufReader, Read, Write},
-    net::TcpListener,
+    net::{TcpListener, TcpStream},
 };
 
 fn main() {
@@ -10,23 +10,32 @@ fn main() {
     let listener = TcpListener::bind("127.0.0.1:9092").unwrap();
 
     for stream in listener.incoming() {
-        let result = stream.and_then(|mut stream| {
-            println!("accepted new connection");
-            let mut buf_reader = BufReader::new(&stream);
-            let mut buf: Vec<u8> = Vec::new();
-            let _request_size = buf_reader.read_to_end(&mut buf).unwrap();
-            let corelation_id = &buf[8..12];
-            let message_id = 0i32.to_be_bytes().to_vec();
-
-            let response = [&message_id, corelation_id].concat();
-            println!("response: {:?}", response);
-            stream.write_all(&response)
-        });
-        match result {
-            Ok(_) => {}
+        match stream {
+            Ok(stream) => {
+                handle_connection(stream);
+            }
             Err(e) => {
-                println!("error: {}", e);
+                eprintln!("Error accepting connection: {}", e);
             }
         }
+    }
+}
+
+fn handle_connection(mut stream: TcpStream) {
+    let mut buf_reader = BufReader::new(&stream);
+    let mut buf: Vec<u8> = Vec::new();
+
+    if let Ok(bytes_read) = buf_reader.read_to_end(&mut buf) {
+        if bytes_read >= 12 {
+            let message_id = 0i32.to_be_bytes();
+            let corelation_id = &buf[8..12];
+            let response = [&message_id, corelation_id].concat();
+
+            if let Err(e) = stream.write_all(&response) {
+                eprintln!("Error writing to stream: {}", e);
+            }
+        }
+    } else {
+        eprintln!("Error reading from stream");
     }
 }
