@@ -15,8 +15,7 @@ fn main() {
             let mut buf_reader = BufReader::new(&stream);
             let mut buf: Vec<u8> = Vec::new();
             let _request_size = buf_reader.read_to_end(&mut buf).unwrap();
-            println!("received: {:?}", _request_size);
-            let corelation_id = &buf[8..16];
+            let corelation_id = &buf[8..12];
             let message_id = 0i32.to_be_bytes().to_vec();
 
             let response = [&message_id, corelation_id].concat();
