@@ -30,6 +30,7 @@ fn handle_connection(mut stream: TcpStream) {
             let message_id = 0i32.to_be_bytes();
             let corelation_id = &buf[8..12];
             let response = [&message_id, corelation_id].concat();
+            println!("Response size: {}", response.len());
 
             if let Err(e) = stream.write_all(&response) {
                 eprintln!("Error writing to stream: {}", e);
