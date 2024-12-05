@@ -4,7 +4,8 @@ use std::{
     net::{TcpListener, TcpStream},
 };
 
-use bytes::Buf;
+use bytes::{Buf, BufMut};
+use codecrafters_kafka::domain::Error;
 
 fn main() {
     println!("Logs from your program will appear here!");
@@ -35,8 +36,10 @@ fn handle_connection(mut stream: TcpStream) {
     let _request_api_key = request.get_i16();
     let _request_api_version = request.get_i16();
     let corelation_id = request.get_i32();
+    let error_code = Error::UnsupportedVersion.error_code();
 
-    let response = [0i32.to_be_bytes(), corelation_id.to_be_bytes()].concat();
+    let mut response = [0i32.to_be_bytes(), corelation_id.to_be_bytes()].concat();
+    response.put_u16(error_code);
     println!("Response: {:?}", response);
     println!("Response size: {}", response.len());
 
