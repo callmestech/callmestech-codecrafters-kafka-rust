@@ -1,8 +1,10 @@
-#![allow(unused_imports)]
+#[allow(unused_imports)]
 use std::{
     io::{BufReader, Read, Write},
     net::{TcpListener, TcpStream},
 };
+
+use bytes::Buf;
 
 fn main() {
     println!("Logs from your program will appear here!");
@@ -22,21 +24,21 @@ fn main() {
 }
 
 fn handle_connection(mut stream: TcpStream) {
-    let mut buf_reader = BufReader::new(&stream);
-    let mut buf: Vec<u8> = Vec::new();
+    let mut message_size = [0; 4];
+    stream.read_exact(&mut message_size).unwrap();
+    let message_size = i32::from_be_bytes(message_size) as usize;
 
-    if let Ok(bytes_read) = buf_reader.read_to_end(&mut buf) {
-        if bytes_read >= 12 {
-            let message_id = 0i32.to_be_bytes();
-            let corelation_id = &buf[8..12];
-            let response = [&message_id, corelation_id].concat();
-            println!("Response size: {}", response.len());
+    let mut request = vec![0; message_size];
+    stream.read_exact(&mut request).unwrap();
+    let mut request = request.as_slice();
 
-            if let Err(e) = stream.write_all(&response) {
-                eprintln!("Error writing to stream: {}", e);
-            }
-        }
-    } else {
-        eprintln!("Error reading from stream");
-    }
+    let _request_api_key = request.get_i16();
+    let _request_api_version = request.get_i16();
+    let corelation_id = request.get_i32();
+
+    let response = [0i32.to_be_bytes(), corelation_id.to_be_bytes()].concat();
+    println!("Response: {:?}", response);
+    println!("Response size: {}", response.len());
+
+    stream.write_all(&response).unwrap();
 }
