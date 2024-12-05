@@ -19,7 +19,7 @@ fn main() {
             let message_id = 0i32.to_be_bytes().to_vec();
 
             let response = [&message_id, corelation_id].concat();
-
+            println!("response: {:?}", response);
             stream.write_all(&response)
         });
         match result {
