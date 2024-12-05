@@ -1,21 +1,26 @@
 #![allow(unused_imports)]
-use std::{io::Write, net::TcpListener};
+use std::{
+    io::{BufReader, Read, Write},
+    net::TcpListener,
+};
 
 fn main() {
-    // You can use print statements as follows for debugging, they'll be visible when running tests.
     println!("Logs from your program will appear here!");
 
-    // Uncomment this block to pass the first stage
-    //
     let listener = TcpListener::bind("127.0.0.1:9092").unwrap();
 
     for stream in listener.incoming() {
         let result = stream.and_then(|mut stream| {
             println!("accepted new connection");
-            let message_id = 0i32.to_be_bytes();
-            let corelation_id = 7i32.to_be_bytes();
+            let mut buf_reader = BufReader::new(&stream);
+            let mut buf: Vec<u8> = Vec::new();
+            let _request_size = buf_reader.read_to_end(&mut buf).unwrap();
+            println!("received: {:?}", _request_size);
+            let corelation_id = &buf[8..16];
+            let message_id = 0i32.to_be_bytes().to_vec();
 
-            let response = [message_id, corelation_id].concat();
+            let response = [&message_id, corelation_id].concat();
+
             stream.write_all(&response)
         });
         match result {
