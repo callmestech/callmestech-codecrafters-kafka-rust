@@ -4,8 +4,8 @@ use std::{
     net::{TcpListener, TcpStream},
 };
 
-use bytes::{Buf, BufMut};
-use codecrafters_kafka::domain::Error;
+use bytes::BytesMut;
+use codecrafters_kafka::domain::{Request, Response};
 
 fn main() {
     println!("Logs from your program will appear here!");
@@ -25,23 +25,19 @@ fn main() {
 }
 
 fn handle_connection(mut stream: TcpStream) {
-    let mut message_size = [0; 4];
-    stream.read_exact(&mut message_size).unwrap();
-    let message_size = i32::from_be_bytes(message_size) as usize;
+    // read request from the stream
+    let mut reader = BufReader::new(&stream);
+    let mut buf = vec![];
+    reader.read_to_end(&mut buf).unwrap();
 
-    let mut request = vec![0; message_size];
-    stream.read_exact(&mut request).unwrap();
-    let mut request = request.as_slice();
+    let mut bytes_mut = BytesMut::from(&buf[..]);
+    let request = Request::from(&mut bytes_mut);
+    let response = Response::from(&request);
 
-    let _request_api_key = request.get_i16();
-    let _request_api_version = request.get_i16();
-    let corelation_id = request.get_i32();
-    let error_code = Error::UnsupportedVersion.error_code();
-
-    let mut response = [0i32.to_be_bytes(), corelation_id.to_be_bytes()].concat();
-    response.put_u16(error_code);
     println!("Response: {:?}", response);
-    println!("Response size: {}", response.len());
+    println!("Response size: {}", response.message_size());
 
-    stream.write_all(&response).unwrap();
+    let response_bytes: BytesMut = response.into();
+
+    stream.write_all(&response_bytes).unwrap();
 }

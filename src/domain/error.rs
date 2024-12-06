@@ -1,11 +1,13 @@
 pub enum Error {
     UnsupportedVersion,
+    NoError,
 }
 
 impl Error {
-    pub fn error_code(&self) -> u16 {
+    pub fn error_code(&self) -> i16 {
         match self {
             Error::UnsupportedVersion => 35,
+            Error::NoError => 0,
         }
     }
 
