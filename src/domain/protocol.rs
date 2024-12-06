@@ -70,7 +70,7 @@ impl Response {
 
 impl From<&Request> for Response {
     fn from(req: &Request) -> Self {
-        let error = if req.header().request_api_version() > 4 {
+        let error = if req.header().api_key() > 4 {
             Error::UnsupportedVersion
         } else {
             Error::NoError
@@ -106,9 +106,9 @@ impl From<Response> for BytesMut {
 #[derive(Debug)]
 pub struct RequestHeader {
     /// The API key of the request.
-    request_api_key: i16,
+    api_key: i16,
     /// The version of the API for the request.
-    request_api_version: i16,
+    api_version: i16,
     /// A unique identifier for the request.
     corelation_id: i32,
     /// The client id of the request.
@@ -123,19 +123,19 @@ impl RequestHeader {
         client_id: NullableString,
     ) -> Self {
         Self {
-            request_api_key,
-            request_api_version,
+            api_key: request_api_key,
+            api_version: request_api_version,
             corelation_id,
             client_id,
         }
     }
 
-    pub fn request_api_key(&self) -> i16 {
-        self.request_api_key
+    pub fn api_key(&self) -> i16 {
+        self.api_key
     }
 
-    pub fn request_api_version(&self) -> i16 {
-        self.request_api_version
+    pub fn api_version(&self) -> i16 {
+        self.api_version
     }
 
     pub fn corelation_id(&self) -> i32 {
