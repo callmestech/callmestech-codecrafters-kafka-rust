@@ -70,7 +70,7 @@ impl Response {
 
 impl From<&Request> for Response {
     fn from(req: &Request) -> Self {
-        let error = if req.header().api_key() > 4 {
+        let error = if req.header().api_version() > 4 {
             Error::UnsupportedVersion
         } else {
             Error::NoError
@@ -134,7 +134,7 @@ impl RequestHeader {
         self.api_key
     }
 
-    pub fn request_api_version(&self) -> i16 {
+    pub fn api_version(&self) -> i16 {
         self.api_version
     }
 
