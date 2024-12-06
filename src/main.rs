@@ -26,12 +26,15 @@ fn main() {
 
 fn handle_connection(mut stream: TcpStream) {
     // read request from the stream
+    println!("Accepting connection");
     let mut reader = BufReader::new(&stream);
     let mut buf = vec![];
     reader.read_to_end(&mut buf).unwrap();
+    println!("Received {} bytes", buf.len());
 
     let mut bytes_mut = BytesMut::from(&buf[..]);
     let request = Request::from(&mut bytes_mut);
+    println!("Request: {:?}", request);
     let response = Response::from(&request);
 
     println!("Response: {:?}", response);

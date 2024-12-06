@@ -2,6 +2,7 @@ use bytes::{Buf, BufMut, BytesMut};
 
 use super::{ApiKey, ApiKeyType, Error, NullableString};
 
+#[derive(Debug)]
 pub struct Request {
     /// The size of the header and the message.
     message_size: i32,
@@ -37,6 +38,10 @@ impl Request {
     pub fn header(&self) -> &RequestHeader {
         &self.header
     }
+
+    pub fn message_size(&self) -> i32 {
+        self.message_size
+    }
 }
 
 #[derive(Debug)]
@@ -63,14 +68,6 @@ impl Response {
     }
 }
 
-impl Into<BytesMut> for Response {
-    fn into(self) -> BytesMut {
-        let mut bytes = BytesMut::new();
-        bytes.put_i32(self.message_size());
-        bytes
-    }
-}
-
 impl From<&Request> for Response {
     fn from(req: &Request) -> Self {
         let error = if req.header().request_api_version() > 4 {
@@ -94,7 +91,19 @@ impl From<&Request> for Response {
     }
 }
 
+impl From<Response> for BytesMut {
+    fn from(value: Response) -> Self {
+        let mut bytes = BytesMut::new();
+        bytes.put_i32(value.message_size());
+        let response_header_bytes: BytesMut = value.header.into();
+        bytes.extend_from_slice(&response_header_bytes);
+
+        bytes
+    }
+}
+
 /// Request Header v2
+#[derive(Debug)]
 pub struct RequestHeader {
     /// The API key of the request.
     request_api_key: i16,
@@ -131,6 +140,21 @@ impl RequestHeader {
 
     pub fn corelation_id(&self) -> i32 {
         self.corelation_id
+    }
+
+    pub fn client_id(&self) -> &NullableString {
+        &self.client_id
+    }
+}
+
+impl From<BytesMut> for RequestHeader {
+    fn from(mut bytes: BytesMut) -> Self {
+        RequestHeader::new(
+            bytes.get_i16(),
+            bytes.get_i16(),
+            bytes.get_i32(),
+            NullableString::from(bytes),
+        )
     }
 }
 
@@ -179,21 +203,46 @@ impl ResponseHeader {
     }
 }
 
-impl Into<BytesMut> for ResponseHeader {
-    fn into(self) -> BytesMut {
-        let mut bytes = BytesMut::new();
-        bytes.put_i32(self.corelation_id());
-        bytes.put_i16(self.error_code());
+impl From<&mut BytesMut> for ResponseHeader {
+    fn from(value: &mut BytesMut) -> Self {
+        let corelation_id = value.get_i32();
+        let error_code = value.get_i16();
+        let api_keys_len = value.get_i8();
+        let mut api_keys_bytes = vec![0; api_keys_len as usize];
+        value.copy_to_slice(&mut api_keys_bytes);
+        let api_keys_bytes = BytesMut::from(&api_keys_bytes[..]);
+        let mut api_keys = vec![];
 
-        let api_keys_len = self.api_keys().len() as i8;
+        for chunk in api_keys_bytes.chunks(api_keys_bytes.len() / api_keys_len as usize) {
+            let api_key = ApiKey::from(BytesMut::from(chunk));
+            api_keys.push(api_key);
+        }
+
+        ResponseHeader {
+            corelation_id,
+            error_code,
+            api_keys,
+            throttle_time_ms: 420,
+            tag_buffer: 0,
+        }
+    }
+}
+
+impl From<ResponseHeader> for BytesMut {
+    fn from(value: ResponseHeader) -> Self {
+        let mut bytes = BytesMut::new();
+        bytes.put_i32(value.corelation_id());
+        bytes.put_i16(value.error_code());
+
+        let api_keys_len = value.api_keys().len() as i8;
         // the api_keys_len is the number of api keys plus 1
         bytes.put_i8(api_keys_len + 1);
-        for api_key in self.api_keys {
+        for api_key in value.api_keys {
             let api_key_bytes: BytesMut = api_key.into();
             bytes.extend_from_slice(&api_key_bytes);
         }
-        bytes.put_i32(self.throttle_time_ms);
-        bytes.put_i8(self.tag_buffer);
+        bytes.put_i32(value.throttle_time_ms);
+        bytes.put_i8(value.tag_buffer);
 
         bytes
     }
