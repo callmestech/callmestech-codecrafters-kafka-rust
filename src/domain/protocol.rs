@@ -9,8 +9,8 @@ pub struct Request {
     header: RequestHeader,
 }
 
-impl From<&mut BytesMut> for Request {
-    fn from(bytes_mut: &mut BytesMut) -> Self {
+impl From<BytesMut> for Request {
+    fn from(mut bytes_mut: BytesMut) -> Self {
         let message_size = bytes_mut.get_i32();
         let request_api_key = bytes_mut.get_i16();
         let request_api_version = bytes_mut.get_i16();
@@ -134,7 +134,7 @@ impl RequestHeader {
         self.api_key
     }
 
-    pub fn api_version(&self) -> i16 {
+    pub fn request_api_version(&self) -> i16 {
         self.api_version
     }
 
