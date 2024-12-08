@@ -1,4 +1,4 @@
-#[allow(unused_imports)]
+use std::thread;
 use std::{
     io::{BufReader, Read, Write},
     net::{TcpListener, TcpStream},
@@ -15,7 +15,11 @@ fn main() -> anyhow::Result<()> {
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
-                handle_connection(stream)?;
+                // spawn a new thread to handle the connection
+                // todo: fix this using thread pool
+                thread::spawn(|| {
+                    handle_connection(stream).unwrap();
+                });
             }
             Err(e) => {
                 eprintln!("Error accepting connection: {}", e);
@@ -55,7 +59,6 @@ fn handle_connection(mut stream: TcpStream) -> anyhow::Result<()> {
         let response_bytes: BytesMut = response.into();
 
         stream.write_all(&response_bytes)?;
-
     }
     Ok(())
 }
