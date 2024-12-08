@@ -2,6 +2,7 @@ use bytes::{Buf, BufMut, BytesMut};
 
 pub enum ApiKeyType {
     ApiVersions = 18,
+    DescribeTopicPartitions = 75,
 }
 
 #[derive(Debug, Clone)]

@@ -70,23 +70,30 @@ impl Response {
 
 impl From<&Request> for Response {
     fn from(req: &Request) -> Self {
-        let error = if req.header().api_version() > 4 || req.header().api_version() < 0 {
+        let error = if !(0..5).contains(&req.header().api_version()) {
             Error::UnsupportedVersion
         } else {
             Error::NoError
         };
         let corelation_id = req.header().corelation_id();
-        let api_key = ApiKey::new(ApiKeyType::ApiVersions, 0, 4);
-        let response_header =
-            ResponseHeader::new(corelation_id, error.error_code(), vec![api_key.clone()]);
-        let response_header_bytes: BytesMut = response_header.into();
-        // it's so weird that we have to create a new response header
-        // i need to do it because the value is moved after calling into
-        let response_header = ResponseHeader::new(corelation_id, error.error_code(), vec![api_key]);
+        let api_versions_key = ApiKey::new(ApiKeyType::ApiVersions, 0, 4);
+        let describe_topic_partitions_key = ApiKey::new(ApiKeyType::DescribeTopicPartitions, 0, 0);
+
+        let header = ResponseHeader::new(
+            corelation_id,
+            error.error_code(),
+            vec![
+                api_versions_key.clone(),
+                describe_topic_partitions_key.clone(),
+            ],
+        );
+        // the clone here can be replaced if I return header instead
+        let response_header_bytes: BytesMut = header.clone().into();
+        let message_size = response_header_bytes.len() as i32;
 
         Self {
-            message_size: response_header_bytes.len() as i32,
-            header: response_header,
+            message_size,
+            header,
         }
     }
 }
@@ -158,7 +165,7 @@ impl From<BytesMut> for RequestHeader {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ResponseHeader {
     /// The correlation ID of the response.
     corelation_id: i32,
