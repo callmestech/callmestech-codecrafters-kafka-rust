@@ -28,30 +28,34 @@ fn main() -> anyhow::Result<()> {
 
 fn handle_connection(mut stream: TcpStream) -> anyhow::Result<()> {
     // read request from the stream
-    println!("Accepting connection");
-    let mut reader = BufReader::new(&stream);
-    // read the first 4 bytes to get the size of the request
-    let mut req_size = [0u8; 4];
-    reader.read_exact(&mut req_size)?;
-    let req_size = i32::from_be_bytes(req_size);
-    println!("Reading request of {} bytes", req_size);
-    // read req_size bytes to get the request
-    let mut buf = vec![0u8; req_size as usize];
-    reader.read_exact(&mut buf)?;
-    println!("Received {} bytes", buf.len());
-    // prepend the size of the request to the
-    let buf = [req_size.to_be_bytes().to_vec(), buf].concat();
 
-    let bytes_mut = BytesMut::from(&buf[..]);
-    let request = bytes_mut.into();
-    println!("Request: {:?}", request);
-    let response = Response::from(&request);
+    while stream.peek(&mut [0u8; 1]).is_ok() {
+        println!("Accepting connection");
+        let mut reader = BufReader::new(&stream);
+        // read the first 4 bytes to get the size of the request
+        let mut req_size = [0u8; 4];
+        reader.read_exact(&mut req_size)?;
+        let req_size = i32::from_be_bytes(req_size);
+        println!("Reading request of {} bytes", req_size);
+        // read req_size bytes to get the request
+        let mut buf = vec![0u8; req_size as usize];
+        reader.read_exact(&mut buf)?;
+        println!("Received {} bytes", buf.len());
+        // prepend the size of the request to the
+        let buf = [req_size.to_be_bytes().to_vec(), buf].concat();
 
-    println!("Response: {:?}", response);
-    println!("Response size: {}", response.message_size());
+        let bytes_mut = BytesMut::from(&buf[..]);
+        let request = bytes_mut.into();
+        println!("Request: {:?}", request);
+        let response = Response::from(&request);
 
-    let response_bytes: BytesMut = response.into();
+        println!("Response: {:?}", response);
+        println!("Response size: {}", response.message_size());
 
-    stream.write_all(&response_bytes)?;
+        let response_bytes: BytesMut = response.into();
+
+        stream.write_all(&response_bytes)?;
+
+    }
     Ok(())
 }

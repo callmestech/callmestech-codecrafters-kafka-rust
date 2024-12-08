@@ -70,7 +70,7 @@ impl Response {
 
 impl From<&Request> for Response {
     fn from(req: &Request) -> Self {
-        let error = if req.header().api_version() > 4 {
+        let error = if req.header().api_version() > 4 || req.header().api_version() < 0 {
             Error::UnsupportedVersion
         } else {
             Error::NoError
